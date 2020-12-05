@@ -18,14 +18,14 @@ def analyze(Y):
 ###########################################################
 # regression: run
 ###########################################################
-def run(target, method, thread, round):
+def run(target, method, thread, round, loop, workload):
 
   exe = target + '/' + target
-  print(exe, '-m', method, '-t', thread, '-r', round)
+  print(exe, '-m', method, '-t', thread, '-r', round, '-i', loop, '-w', workload)
 
   with open(tmp_file, "w") as ofs:
     subprocess.call(
-      [exe, '-m', method, '-t', str(thread), '-r', str(round)],
+      [exe, '-m', method, '-t', str(thread), '-r', str(round), '-i', str(loop), '-w', str(workload)],
       stdout=ofs
     )
 
@@ -92,6 +92,20 @@ def main():
   )
 
   parser.add_argument(
+    '-i', '--inner_loop',
+    type=int,
+    help='inner loop count',
+    default=1
+  )
+
+  parser.add_argument(
+    '-w', '--workload',
+    type=int,
+    help='workload amount',
+    default=10
+  )
+
+  parser.add_argument(
     '-p', '--plot',
     type=bool,
     help='show the plot or not',
@@ -112,6 +126,8 @@ def main():
   print('threads:', args.threads)
   print('methods:', args.methods)
   print('num_rounds:', args.num_rounds)
+  print('inner_loop:', args.inner_loop)
+  print('workload:', args.workload)
   print('plot:', args.plot)
 
   rows = len(args.benchmarks)
@@ -131,7 +147,7 @@ def main():
       for method in args.methods:
         ax = plot.title(benchmark + ' (' + str(thread) + ' threads)')
         X, Y = run(
-          benchmark, method, thread, args.num_rounds
+          benchmark, method, thread, args.num_rounds, args.inner_loop, args.workload
         )
         #ax.text(
         #  .5, .9,
@@ -152,8 +168,8 @@ def main():
           marker = '*'
           color  = 'black'
         elif method == 'job':
-          marker = ''
-          color  = 'yellow'
+          marker = '1'
+          color  = 'magenta'
         else:
           marker = '.'
           color  = 'r'

@@ -13,11 +13,13 @@ extern int B;
 extern int MB;
 extern int NB;
 extern double **matrix;
+extern unsigned inner_loop;
+extern unsigned workload;
 
 // nominal operations
 inline double calc(double v0, double v1) {
   double res = v0;
-  for (int i = 0; i < 10; ++i) res = res / (v1 + 0.1);
+  for (unsigned i = 0; i < workload; ++i) res = res / (v1 + 0.1);
   return res;
   // return (v0 == v1) ? std::pow(v0/v1, 4.0f) : std::max(v0,v1);
   //return std::max(v0, v1);

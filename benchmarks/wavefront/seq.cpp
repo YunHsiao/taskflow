@@ -11,7 +11,9 @@ void wavefront_seq() {
 
 std::chrono::microseconds measure_time_seq() {
   auto beg = std::chrono::high_resolution_clock::now();
-  wavefront_seq();
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    wavefront_seq();
+  }
   auto end = std::chrono::high_resolution_clock::now();
   return std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
 }

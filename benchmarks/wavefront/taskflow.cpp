@@ -47,8 +47,10 @@ void wavefront_taskflow(unsigned num_threads) {
   }
   /* */
   beg = std::chrono::high_resolution_clock::now();
-
-  executor.run(taskflow).get();
+    
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    executor.run(taskflow).get();
+  }
 }
 
 std::chrono::microseconds measure_time_taskflow(unsigned num_threads) {

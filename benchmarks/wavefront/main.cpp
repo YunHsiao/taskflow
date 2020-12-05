@@ -7,6 +7,8 @@ int B = 0;
 int MB = 0;
 int NB = 0;
 double **matrix = nullptr;
+unsigned inner_loop = 1;
+unsigned workload = 10;
 
 void wavefront(
   const std::string& model,
@@ -69,7 +71,11 @@ int main(int argc, char* argv[]) {
   unsigned num_rounds {100};
   app.add_option("-r,--num_rounds", num_rounds, "number of rounds (default=100)");
 
-  std::string model = "tf";
+  app.add_option("-i,--inner_loop", inner_loop, "inner loop count (default=1)");
+    
+  app.add_option("-w,--workload", workload, "workload amount (default=10)");
+
+  std::string model = "job";
   app.add_option("-m,--model", model, "model name tbb|omp|tf|asio|seq|job (default=tf)")
      ->check([] (const std::string& m) {
         if(m != "tbb" && m != "omp" && m != "tf" && m != "asio" && m != "job" && m != "seq") {

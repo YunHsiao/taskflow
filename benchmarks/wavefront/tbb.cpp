@@ -38,8 +38,10 @@ void wavefront_tbb(unsigned num_threads) {
   }
 
   beg_tbb = std::chrono::high_resolution_clock::now();
-  node[0][0]->try_put(continue_msg());
-  g.wait_for_all();
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    node[0][0]->try_put(continue_msg());
+    g.wait_for_all();
+  }
   end_tbb = std::chrono::high_resolution_clock::now();
 
   for(int i=0; i<MB; ++i) {

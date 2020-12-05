@@ -6,6 +6,12 @@ int **D {nullptr};
 
 // wavefront computation
 void wavefront_omp(unsigned num_threads) {
+    
+  for(int i=0; i<MB; ++i){
+    for(int j=0; j<NB; ++j){
+      D[i][j] = 0;
+    }
+  }
 
   omp_set_num_threads(num_threads);
 
@@ -60,26 +66,21 @@ void wavefront_omp(unsigned num_threads) {
       #pragma omp taskwait
     }
   }
-
 }
 
 std::chrono::microseconds measure_time_omp(unsigned num_threads) {
-
-    // set up the dependency matrix
-    D = new int *[MB];
-    for(int i=0; i<MB; ++i) D[i] = new int [NB];
-    for(int i=0; i<MB; ++i){
-      for(int j=0; j<NB; ++j){
-        D[i][j] = 0;
-      }
-    }
-
+  // set up the dependency matrix
+  D = new int *[MB];
+  for(int i=0; i<MB; ++i) D[i] = new int [NB];
+    
   auto beg = std::chrono::high_resolution_clock::now();
-  wavefront_omp(num_threads);
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    wavefront_omp(num_threads);
+  }
   auto end = std::chrono::high_resolution_clock::now();
 
-    for ( int i = 0; i < MB; ++i ) delete [] D[i];
-    delete [] D;
+  for ( int i = 0; i < MB; ++i ) delete [] D[i];
+  delete [] D;
 
   return std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
 }

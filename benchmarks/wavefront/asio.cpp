@@ -12,8 +12,10 @@ void compute(int i, int j) {
     if (i < MB - 1) strands[i + 1].post(std::bind(compute, i + 1, j), allocator);
 }
 
+auto timer_asio = std::chrono::high_resolution_clock::now();
+auto timer_asio_snap = std::chrono::high_resolution_clock::now();
 // wavefront computation
-void wavefront_asio(unsigned num_threads) {
+void wavefront_asio(unsigned num_threads, bool first) {
     boost::asio::io_context io;
     
     for (int i = 0; i < MB; ++i) {
@@ -36,6 +38,7 @@ void wavefront_asio(unsigned num_threads) {
 
     
     /* */
+    auto beg = std::chrono::high_resolution_clock::now();
     std::vector<std::thread> threads;
     for (unsigned i = 0; i < num_threads; ++i) {
         threads.emplace_back(std::thread(boost::bind(&boost::asio::io_context::run, &io)));
@@ -44,6 +47,8 @@ void wavefront_asio(unsigned num_threads) {
     for (unsigned i = 0; i < num_threads; ++i) {
         threads[i].join();
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    timer_asio += end - beg;
     /* *
     io.run();
     /* */
@@ -52,8 +57,9 @@ void wavefront_asio(unsigned num_threads) {
 }
 
 std::chrono::microseconds measure_time_asio(unsigned num_threads) {
-  auto beg = std::chrono::high_resolution_clock::now();
-  wavefront_asio(num_threads);
-  auto end = std::chrono::high_resolution_clock::now();
-  return std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
+  timer_asio_snap = timer_asio;
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    wavefront_asio(num_threads, i == 0);
+  }
+  return std::chrono::duration_cast<std::chrono::microseconds>(timer_asio - timer_asio_snap);
 }

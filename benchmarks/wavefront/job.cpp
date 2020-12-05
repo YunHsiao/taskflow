@@ -2,10 +2,10 @@
 
 #include "JobSystem.h"
 
-auto beg_job = std::chrono::high_resolution_clock::now();
-auto end_job = std::chrono::high_resolution_clock::now();
+auto timer_job = std::chrono::high_resolution_clock::now();
+auto timer_job_snap = std::chrono::high_resolution_clock::now();
 // wavefront computation
-void wavefront_job(unsigned num_threads) {
+void wavefront_job(unsigned num_threads, bool first) {
     ThreadPool::kMaxThreadCount = num_threads;
     
     JobSystem sys;
@@ -28,20 +28,20 @@ void wavefront_job(unsigned num_threads) {
             else g.Schedule(handles[i][j]);
         }
     }
-    beg_job = std::chrono::high_resolution_clock::now();
     
+    auto beg = std::chrono::high_resolution_clock::now();
     sys.Dispatch(g);
-    
     handles[MB-1][NB-1]->WaitForComplete();
-    
-    end_job = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
+    timer_job += end - beg;
     
     sys.Stop();
 }
 
 std::chrono::microseconds measure_time_job(unsigned num_threads) {
-//  auto beg = std::chrono::high_resolution_clock::now();
-  wavefront_job(num_threads);
-//  auto end = std::chrono::high_resolution_clock::now();
-  return std::chrono::duration_cast<std::chrono::microseconds>(end_job - beg_job);
+  timer_job_snap = timer_job;
+  for (unsigned i = 0; i < inner_loop; ++i) {
+    wavefront_job(num_threads, i == 0);
+  }
+  return std::chrono::duration_cast<std::chrono::microseconds>(timer_job - timer_job_snap);
 }
