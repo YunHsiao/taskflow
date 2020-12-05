@@ -3,16 +3,18 @@
 #include <tbb/global_control.h>
 #include <tbb/flow_graph.h>
 
+auto beg_tbb = std::chrono::high_resolution_clock::now();
+auto end_tbb = std::chrono::high_resolution_clock::now();
 // the wavefront computation
 void wavefront_tbb(unsigned num_threads) {
 
   using namespace tbb;
   using namespace tbb::flow;
-  
+
   tbb::global_control c(
     tbb::global_control::max_allowed_parallelism, num_threads
   );
-    
+
   continue_node<continue_msg> ***node = new continue_node<continue_msg> **[MB];
 
   for ( int i = 0; i < MB; ++i ) {
@@ -34,10 +36,12 @@ void wavefront_tbb(unsigned num_threads) {
       if(j+1 < NB) make_edge(*node[i][j], *node[i][j+1]);
     }
   }
-  
+
+  beg_tbb = std::chrono::high_resolution_clock::now();
   node[0][0]->try_put(continue_msg());
   g.wait_for_all();
-  
+  end_tbb = std::chrono::high_resolution_clock::now();
+
   for(int i=0; i<MB; ++i) {
     for(int j=0; j<NB; ++j) {
      delete node[i][j];
@@ -49,10 +53,8 @@ void wavefront_tbb(unsigned num_threads) {
 }
 
 std::chrono::microseconds measure_time_tbb(unsigned num_threads) {
-  auto beg = std::chrono::high_resolution_clock::now();
+//  auto beg = std::chrono::high_resolution_clock::now();
   wavefront_tbb(num_threads);
-  auto end = std::chrono::high_resolution_clock::now();
-  return std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
+//  auto end = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(end_tbb - beg_tbb);
 }
-
-

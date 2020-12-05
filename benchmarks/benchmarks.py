@@ -11,7 +11,7 @@ tmp_file="/tmp/tmp.txt"
 
 def analyze(Y):
   print(
-    "  -> [min, max, avg] = [%f, %f, %f]" % 
+    "  -> [min, max, avg] = [%f, %f, %f]" %
     (min(Y), max(Y), stat.mean(Y))
   )
 
@@ -25,13 +25,13 @@ def run(target, method, thread, round):
 
   with open(tmp_file, "w") as ofs:
     subprocess.call(
-      [exe, '-m', method, '-t', str(thread), '-r', str(round)], 
+      [exe, '-m', method, '-t', str(thread), '-r', str(round)],
       stdout=ofs
     )
 
   X = []
   Y = []
-  
+
   with open(tmp_file, "r") as ifs:
     ifs.readline()
     ifs.readline()
@@ -51,7 +51,7 @@ def run(target, method, thread, round):
 def main():
 
   # example usage
-  # -b wavefront graph_traversal -t 1 2 3 -m tbb omp tf
+  # -b wavefront graph_traversal -t 1 2 3 -m tbb omp tf asio job seq
 
   parser = argparse.ArgumentParser(description='regression')
 
@@ -59,25 +59,25 @@ def main():
     '-b', '--benchmarks',
     nargs='+',
     help='list of benchmark names',
-    choices=['wavefront', 
-             'graph_traversal', 
-             'binary_tree', 
-             'linear_chain', 
+    choices=['wavefront',
+             'graph_traversal',
+             'binary_tree',
+             'linear_chain',
              'matrix_multiplication',
              'mnist'],
     required=True
   )
 
   parser.add_argument(
-    '-m','--methods', 
-    nargs='+', 
-    help='list of tasking methods', 
-    default=['tf', 'tbb', 'omp'],
-    choices=['tf', 'tbb', 'omp']
+    '-m','--methods',
+    nargs='+',
+    help='list of tasking methods',
+    default=['tf', 'tbb', 'omp', 'asio', 'job', 'seq'],
+    choices=['tf', 'tbb', 'omp', 'asio', 'job', 'seq']
   )
 
   parser.add_argument(
-    '-t', '--threads', 
+    '-t', '--threads',
     type=int,
     nargs='+',
     help='list of the number of threads',
@@ -104,10 +104,10 @@ def main():
     help='file name to save the plot result',
     default="result.png"
   )
-  
+
   # parse the arguments
   args = parser.parse_args()
-  
+
   print('benchmarks: ', args.benchmarks)
   print('threads:', args.threads)
   print('methods:', args.methods)
@@ -134,7 +134,7 @@ def main():
           benchmark, method, thread, args.num_rounds
         )
         #ax.text(
-        #  .5, .9, 
+        #  .5, .9,
         #  benchmark + ' (' + str(thread) + ' threads)',
         #  horizontalalignment='center',
         #  transform=ax.transAxes
@@ -145,6 +145,15 @@ def main():
         elif method == 'omp':
           marker = '+'
           color  = 'g'
+        elif method == 'asio':
+          marker = '^'
+          color  = 'cyan'
+        elif method == 'seq':
+          marker = '*'
+          color  = 'black'
+        elif method == 'job':
+          marker = ''
+          color  = 'yellow'
         else:
           marker = '.'
           color  = 'r'
@@ -166,6 +175,3 @@ def main():
 # run the main entry
 if __name__ == "__main__":
   main()
-
-
-

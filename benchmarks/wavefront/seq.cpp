@@ -15,4 +15,3 @@ std::chrono::microseconds measure_time_seq() {
   auto end = std::chrono::high_resolution_clock::now();
   return std::chrono::duration_cast<std::chrono::milliseconds>(end - beg);
 }
-

@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# eigen package 
+# eigen package
 # -----------------------------------------------------------------------------
 if(NOT DEFINED EIGEN_ROOT)
   set(EIGEN_ROOT ${PROJECT_SOURCE_DIR}/3rd-party/eigen-3.3.7)
@@ -14,7 +14,7 @@ include(FindOpenMP)
 if(NOT OpenMP_CXX_FOUND)
   message(FATAL_ERROR "OpenMP not found")
 endif()
-  
+
 message(STATUS "OpenMP_VERSION: ${OpenMP_VERSION}")
 message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
 message(STATUS "OpenMP_CXX_LIBRARIES: ${OpenMP_CXX_LIBRARIES}")
@@ -43,26 +43,42 @@ find_package(TBB REQUIRED)
 
 ## benchmark 1: wavefront computing
 add_executable(
-  wavefront 
+  wavefront
   ${TF_BENCHMARK_DIR}/wavefront/main.cpp
   ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
   ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
   ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/job.cpp
   ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
 )
-target_include_directories(wavefront PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(wavefront PRIVATE
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem
+  ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
+  "/usr/local/Cellar/libomp/11.0.0/include"
+  ${PROJECT_SOURCE_DIR}/3rd-party/boost_1_74_0
+)
 target_link_libraries(
-  wavefront 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  wavefront
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(wavefront PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 2: graph traversal
 add_executable(
-  graph_traversal 
+  graph_traversal
   ${TF_BENCHMARK_DIR}/graph_traversal/main.cpp
   ${TF_BENCHMARK_DIR}/graph_traversal/omp.cpp
   ${TF_BENCHMARK_DIR}/graph_traversal/tbb.cpp
@@ -71,17 +87,17 @@ add_executable(
 )
 target_include_directories(graph_traversal PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  graph_traversal 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  graph_traversal
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(graph_traversal PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 3: binary_tree
 add_executable(
-  binary_tree 
+  binary_tree
   ${TF_BENCHMARK_DIR}/binary_tree/main.cpp
   ${TF_BENCHMARK_DIR}/binary_tree/tbb.cpp
   ${TF_BENCHMARK_DIR}/binary_tree/omp.cpp
@@ -89,10 +105,10 @@ add_executable(
 )
 target_include_directories(binary_tree PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  binary_tree 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  binary_tree
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(binary_tree PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
@@ -107,55 +123,60 @@ add_executable(
 )
 target_include_directories(linear_chain PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  linear_chain 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  linear_chain
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(linear_chain PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 5: MNIST
 add_executable(
-  mnist 
+  mnist
   ${TF_BENCHMARK_DIR}/mnist/main.cpp
   ${TF_BENCHMARK_DIR}/mnist/omp.cpp
   ${TF_BENCHMARK_DIR}/mnist/tbb.cpp
   ${TF_BENCHMARK_DIR}/mnist/seq.cpp
   ${TF_BENCHMARK_DIR}/mnist/taskflow.cpp
 )
-target_include_directories(mnist PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(mnist PRIVATE
+  ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
+  "/usr/local/Cellar/libomp/11.0.0/include"
+)
 target_link_libraries(
-  mnist 
-  ${PROJECT_NAME} 
+  mnist
+  ${PROJECT_NAME}
   ${TBB_IMPORTED_TARGETS}
-  ${OpenMP_CXX_LIBRARIES} 
-  stdc++fs 
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(mnist PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 6: matrix multiplication
 add_executable(
-  matrix_multiplication 
+  matrix_multiplication
   ${TF_BENCHMARK_DIR}/matrix_multiplication/main.cpp
   ${TF_BENCHMARK_DIR}/matrix_multiplication/omp.cpp
   ${TF_BENCHMARK_DIR}/matrix_multiplication/tbb.cpp
   ${TF_BENCHMARK_DIR}/matrix_multiplication/taskflow.cpp
 )
-target_include_directories(matrix_multiplication PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(matrix_multiplication PRIVATE
+  ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
+  "/usr/local/Cellar/libomp/11.0.0/include"
+)
 target_link_libraries(
-  matrix_multiplication 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  matrix_multiplication
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(matrix_multiplication PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 7: mandelbrot
 add_executable(
-  mandelbrot 
+  mandelbrot
   ${TF_BENCHMARK_DIR}/mandelbrot/main.cpp
   ${TF_BENCHMARK_DIR}/mandelbrot/omp.cpp
   ${TF_BENCHMARK_DIR}/mandelbrot/tbb.cpp
@@ -163,10 +184,10 @@ add_executable(
 )
 target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  mandelbrot 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  mandelbrot
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(mandelbrot PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
@@ -181,10 +202,10 @@ add_executable(
 )
 target_include_directories(black_scholes PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  black_scholes 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  black_scholes
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(black_scholes PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
@@ -199,10 +220,10 @@ add_executable(
 )
 target_include_directories(reduce_sum PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  reduce_sum 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  reduce_sum
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(reduce_sum PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
@@ -217,10 +238,10 @@ add_executable(
 )
 target_include_directories(parallel_sort PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
 target_link_libraries(
-  parallel_sort 
-  ${PROJECT_NAME} 
-  ${TBB_IMPORTED_TARGETS} 
-  ${OpenMP_CXX_LIBRARIES} 
+  parallel_sort
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
   tf::default_settings
 )
 set_target_properties(parallel_sort PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
@@ -233,30 +254,30 @@ if(TF_BUILD_CUDA)
 
   ## cuda benchmark 1: heterogeneous traversal
   add_executable(
-    hetero_traversal 
+    hetero_traversal
     ${TF_BENCHMARK_DIR}/hetero_traversal/main.cu
     ${TF_BENCHMARK_DIR}/hetero_traversal/taskflow.cu
     ${TF_BENCHMARK_DIR}/hetero_traversal/tbb.cu
     ${TF_BENCHMARK_DIR}/hetero_traversal/omp.cu
   )
-  
+
   target_include_directories(
     hetero_traversal PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
   )
-  
+
   target_link_libraries(
-    hetero_traversal 
-    ${PROJECT_NAME} 
-    Threads::Threads 
-    ${TBB_IMPORTED_TARGETS} 
-    ${OpenMP_CXX_LIBRARIES} 
+    hetero_traversal
+    ${PROJECT_NAME}
+    Threads::Threads
+    ${TBB_IMPORTED_TARGETS}
+    ${OpenMP_CXX_LIBRARIES}
     tf::default_settings
   )
-  
+
   set_target_properties(
     hetero_traversal PROPERTIES COMPILE_FLAGS "-Xcompiler ${OpenMP_CXX_FLAGS}"
   )
-  
+
   # avoid cmake 3.18+ warning
   # we let nvcc to decide the flag if the architecture is not given
   if(NOT CUDA_ARCHITECTURES)
@@ -265,4 +286,3 @@ if(TF_BUILD_CUDA)
 
 
 endif(TF_BUILD_CUDA)
-
