@@ -5,13 +5,16 @@ MESSAGE(STATUS "CMAKE_ROOT: " ${CMAKE_ROOT})
 # Project name
 project(Taskflow VERSION 3.0.0 LANGUAGES CXX)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
+set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.cocos.benchmarks")
+
 # build options
-option(TF_BUILD_BENCHMARKS "Enables builds of benchmarks" OFF)
-option(TF_BUILD_CUDA "Enables builds of cuda code" OFF)
-option(TF_BUILD_SYCL "Enables builds of sycl code" OFF)
-option(TF_BUILD_TESTS "Enables builds of tests" ON)
-option(TF_BUILD_EXAMPLES "Enables builds of examples" ON)
-option(TF_BUILD_PROFILER "Enables builds of profiler" ON)
+option(TF_BUILD_BENCHMARKS "Enables build of benchmarks" ON)
+option(TF_BUILD_CUDA "Enables build of cuda code" OFF)
+option(TF_BUILD_SYCL "Enables build of sycl code" OFF)
+option(TF_BUILD_TESTS "Enables build of tests" OFF)
+option(TF_BUILD_EXAMPLES "Enables build of examples" OFF)
 
 # project-specific variables
 set(TF_INC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
