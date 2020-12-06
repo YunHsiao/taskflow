@@ -40,8 +40,6 @@
     #define TBB_RUN_BUFFERING_TEST 1
 #endif
 
-#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
-
 #if TBB_USE_EXCEPTIONS
 #if USE_TASK_SCHEDULER_OBSERVER
 #include "tbb/task_scheduler_observer.h"
@@ -179,7 +177,6 @@ public:
         REMARK("- --------- - - -   constructed %lx\n", (size_t)(my_current_val));
     }
 
-#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()(OutputType & out) {
         UPDATE_COUNTS();
         out = OutputType(my_mult * ++(*my_current_val));
@@ -192,19 +189,6 @@ public:
         WaitAndThrow((int)out,"test_source_body");
         return true;
     }
-#else
-    OutputType operator()(tbb::flow_control& fc) {
-        UPDATE_COUNTS();
-        OutputType ret = OutputType(my_mult * ++(*my_current_val));
-        if(*my_current_val > g_NumItems) {
-            *my_current_val = g_NumItems;
-            fc.stop();
-            return OutputType();
-        }
-        WaitAndThrow((int)ret,"test_input_body");
-        return ret;
-    }
-#endif
 
     int count_value() { return (int)*my_current_val; }
 };
@@ -215,7 +199,7 @@ class test_source_body<tbb::flow::continue_msg, TType> : WaitThrow<serial_type, 
     tbb::atomic<int> *my_current_val;
 public:
     test_source_body(tbb::atomic<int> &my_cnt) : my_current_val(&my_cnt) { }
-#if TBB_DEPRECATED_INPUT_NODE_BODY
+
     bool operator()(tbb::flow::continue_msg & out) {
         UPDATE_COUNTS();
         int outint = ++(*my_current_val);
@@ -227,19 +211,6 @@ public:
         WaitAndThrow(outint,"test_source_body");
         return true;
     }
-#else
-    tbb::flow::continue_msg operator()( tbb::flow_control & fc) {
-        UPDATE_COUNTS();
-        int outint = ++(*my_current_val);
-        if(*my_current_val > g_NumItems) {
-            *my_current_val = g_NumItems;
-            fc.stop();
-            return tbb::flow::continue_msg();
-        }
-        WaitAndThrow(outint,"test_input_body");
-        return tbb::flow::continue_msg();
-    }
-#endif
 
     int count_value() { return (int)*my_current_val; }
 };
@@ -349,7 +320,7 @@ class tuple_test_source_body : WaitThrow<serial_type, TType> {
     tbb::atomic<int> *my_current_val;
 public:
     tuple_test_source_body(tbb::atomic<int> &my_cnt) : my_current_val(&my_cnt) { }
-#if TBB_DEPRECATED_INPUT_NODE_BODY
+
     bool operator()(OutputTuple & out) {
         UPDATE_COUNTS();
         int ival = ++(*my_current_val);
@@ -361,19 +332,6 @@ public:
         WaitAndThrow(ival,"tuple_test_source_body");
         return true;
     }
-#else
-    OutputTuple operator()(tbb::flow_control& fc) {
-        UPDATE_COUNTS();
-        int ival = ++(*my_current_val);
-        if(*my_current_val > g_NumItems) {
-            *my_current_val = g_NumItems;  // jam the final value; we assert on it later.
-            fc.stop();
-            return OutputTuple();
-        }
-        WaitAndThrow(ival,"tuple_test_input_body");
-        return OutputTuple(ItemType0(ival),ItemType1(ival));
-    }
-#endif
 
     int count_value() { return (int)*my_current_val; }
 };
