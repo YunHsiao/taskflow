@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
+if(NOT OMPDIR OR NOT TBBDIR)
+  message(FATAL_ERROR "OpenMP or TBB lib root not set")
+endif()
+
 # -----------------------------------------------------------------------------
 # eigen package
 # -----------------------------------------------------------------------------
@@ -31,16 +35,14 @@ endfunction()
 if(NOT OpenMP_CXX_FOUND)
   message(STATUS "OpenMP not found")
   if(IOS)
-    set(ompdir /Users/panda/StudyWork/Cocos/taskflow/omp-ios)
     set(OpenMP_VERSION 5.0.0)
-    set(OpenMP_CXX_FLAGS -I${ompdir}/include)
-    set(OpenMP_CXX_LIBRARIES ${ompdir}/lib/libomp.a)
+    set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
+    set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
   endif()
   if(ANDROID)
-    set(ompdir /Users/panda/StudyWork/Cocos/taskflow/omp-android)
     set(OpenMP_VERSION 5.0.0)
-    set(OpenMP_CXX_FLAGS -I${ompdir}/include)
-    set(OpenMP_CXX_LIBRARIES ${ompdir}/lib/libomp.a)
+    set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
+    set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
   endif()
 endif()
 
@@ -71,21 +73,20 @@ message(STATUS "OpenMP_CXX_LIBRARIES: ${OpenMP_CXX_LIBRARIES}")
 # endif()
 
 if(IOS)
-  set(TROOT /Users/panda/StudyWork/Cocos/taskflow/ttb-ios)
   add_library(tbb STATIC IMPORTED GLOBAL)
   set_target_properties(tbb PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbb_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbb_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   add_library(tbbmalloc STATIC IMPORTED GLOBAL)
   set_target_properties(tbbmalloc PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbbmalloc_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   add_library(tbbmalloc_proxy STATIC IMPORTED GLOBAL)
   set_target_properties(tbbmalloc_proxy PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbbmalloc_proxy_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   set(TBB_IMPORTED_TARGETS
     tbb tbbmalloc tbbmalloc_proxy
@@ -93,21 +94,20 @@ if(IOS)
 endif()
 
 if(ANDROID)
-  set(TROOT /Users/panda/StudyWork/Cocos/taskflow/tbb-android)
   add_library(tbb STATIC IMPORTED GLOBAL)
   set_target_properties(tbb PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbb_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbb_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   add_library(tbbmalloc STATIC IMPORTED GLOBAL)
   set_target_properties(tbbmalloc PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbbmalloc_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   add_library(tbbmalloc_proxy STATIC IMPORTED GLOBAL)
   set_target_properties(tbbmalloc_proxy PROPERTIES
-    IMPORTED_LOCATION ${TROOT}/lib/libtbbmalloc_proxy_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TROOT}/include
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
   set(TBB_IMPORTED_TARGETS
     tbbmalloc_proxy tbbmalloc  tbb

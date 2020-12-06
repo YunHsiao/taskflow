@@ -19,5 +19,6 @@ PATH=$PATH:$ANDROID_NDK_L ${CMAKE_EXE} .. "-DCMAKE_CXX_FLAGS=-frtti -fexceptions
     "-DANDROID_TOOLCHAIN=clang" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_INSTALL_PREFIX=/Users/panda/StudyWork/Cocos/taskflow/tf-install-android
+    -DOMPDIR=/Users/panda/StudyWork/Cocos/taskflow/omp-android \
+    -DTBBDIR=/Users/panda/StudyWork/Cocos/taskflow/ttb-android
 
