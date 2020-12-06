@@ -142,7 +142,6 @@ add_executable(
 target_include_directories(wavefront PRIVATE
   ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem
   ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
-  "/usr/local/Cellar/libomp/11.0.0/include"
   ${PROJECT_SOURCE_DIR}/3rd-party/boost_1_74_0
 )
 target_link_libraries(
@@ -224,7 +223,6 @@ if(NOT IOS AND NOT ANDROID)
   build_target(mnist)
   target_include_directories(mnist PRIVATE 
     ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
-    "/usr/local/Cellar/libomp/11.0.0/include"
   )
   target_link_libraries(
     mnist 
@@ -248,7 +246,6 @@ add_executable(
 )
 target_include_directories(matrix_multiplication PRIVATE
   ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
-  "/usr/local/Cellar/libomp/11.0.0/include"
 )
 target_link_libraries(
   matrix_multiplication
