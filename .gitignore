@@ -1,6 +1,7 @@
 build
 build-android
 build-ios
+build-mac
 benchmarks/wavefront/wavefront
 benchmarks/result.png
 **/.DS_Store
