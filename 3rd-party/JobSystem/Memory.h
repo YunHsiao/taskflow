@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 #ifndef PLATFORM_CACHE_LINE_SIZE
     #define PLATFORM_CACHE_LINE_SIZE 64
