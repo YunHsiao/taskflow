@@ -140,7 +140,7 @@ add_executable(
   ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
 )
 target_include_directories(wavefront PRIVATE
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem
+  ${PROJECT_SOURCE_DIR}/3rd-party
   ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
   ${PROJECT_SOURCE_DIR}/3rd-party/boost_1_74_0
 )

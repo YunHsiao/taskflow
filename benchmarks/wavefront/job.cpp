@@ -1,6 +1,6 @@
 #include "matrix.hpp"
 
-#include "JobSystem.h"
+#include "JobSystem/JobSystem.h"
 
 auto timer_job = std::chrono::high_resolution_clock::now();
 auto timer_job_snap = std::chrono::high_resolution_clock::now();
