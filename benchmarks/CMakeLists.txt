@@ -15,7 +15,14 @@ include_directories(${EIGEN_ROOT})
 # -----------------------------------------------------------------------------
 # find OpenMP package
 # -----------------------------------------------------------------------------
-include(FindOpenMP)
+
+if(ANDROID)
+  set(OpenMP_VERSION 5.0.0)
+  set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
+  set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
+else()
+  include(FindOpenMP)
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "iOS")
   set(IOS ON)
@@ -23,8 +30,6 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "iOS")
 elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Android")
   set(ANDROID ON)
 endif()
-
-message(STATUS "CMAKE_SYSTEM_NAME  ${CMAKE_SYSTEM_NAME}??")
 
 function(build_target tar)
   if(IOS_EXCLUDE)
@@ -35,11 +40,6 @@ endfunction()
 if(NOT OpenMP_CXX_FOUND)
   message(STATUS "OpenMP not found")
   if(IOS)
-    set(OpenMP_VERSION 5.0.0)
-    set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
-    set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
-  endif()
-  if(ANDROID)
     set(OpenMP_VERSION 5.0.0)
     set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
     set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
@@ -120,25 +120,50 @@ endif()
 # -----------------------------------------------------------------------------
 
 ## benchmark 1: wavefront computing
-add_executable(
-  wavefront
-  ${TF_BENCHMARK_DIR}/wavefront/main.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/job.cpp
-  ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
-  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
-)
+if(ANDROID)
+  add_library(
+    wavefront SHARED
+    ${TF_BENCHMARK_DIR}/jni_invoke.cpp
+    ${TF_BENCHMARK_DIR}/benchmark.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/main.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/job.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
+  )
+else()
+  add_executable(
+    wavefront
+    ${TF_BENCHMARK_DIR}/benchmark.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/main.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/job.cpp
+    ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
+    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
+  )
+endif()
 target_include_directories(wavefront PRIVATE
   ${PROJECT_SOURCE_DIR}/3rd-party
   ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
