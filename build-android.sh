@@ -17,8 +17,8 @@ PATH=$PATH:$ANDROID_NDK_L ${CMAKE_EXE} .. "-DCMAKE_CXX_FLAGS=-frtti -fexceptions
     "-DCMAKE_SYSTEM_VERSION=26" \
     "-DANDROID_STL=c++_static" \
     "-DANDROID_TOOLCHAIN=clang" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CXX_STANDARD=17 \
-    -DOMPDIR=/Users/panda/StudyWork/Cocos/taskflow/omp-android \
-    -DTBBDIR=/Users/panda/StudyWork/Cocos/taskflow/ttb-android
+    "-DCMAKE_BUILD_TYPE=Release" \
+    "-DCMAKE_CXX_STANDARD=17" \
+    "-DOMPDIR=/Users/panda/StudyWork/Cocos/taskflow/omp-android" \
+    "-DTBBDIR=/Users/panda/StudyWork/Cocos/taskflow/tbb-android"
 

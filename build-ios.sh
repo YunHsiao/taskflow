@@ -4,4 +4,4 @@ cmake .. -GXcode \
  -DCMAKE_OSX_SYSROOT=iphoneos \
  -DTF_BUILD_BENCHMARKS=ON \
  -DOMPDIR=/Users/panda/StudyWork/Cocos/taskflow/omp-ios \
- -DTBBDIR=/Users/panda/StudyWork/Cocos/taskflow/ttb-ios
+ -DTBBDIR=/Users/panda/StudyWork/Cocos/taskflow/tbb-ios
