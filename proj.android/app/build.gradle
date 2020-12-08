@@ -7,6 +7,15 @@ android {
     buildToolsVersion "30.0.2"
     ndkVersion "22.0.6917172"
 
+    signingConfigs {
+        release {
+            storeFile file('/Users/panda/Downloads/android.keystore')
+            storePassword 'hyf123456'
+            keyAlias 'android.keystore'
+            keyPassword 'hyf123456'
+        }
+    }
+
     defaultConfig {
         applicationId "com.cocos.engine"
         minSdkVersion 21
@@ -28,8 +37,18 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            renderscriptOptimLevel 3
+        }
+        debug {
+            debuggable true
+            jniDebuggable true
+            renderscriptDebuggable true
+            renderscriptOptimLevel 0
         }
     }
     sourceSets.main {
