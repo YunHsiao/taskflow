@@ -39,7 +39,7 @@ std::string wavefront(
   const unsigned num_rounds
   ) {
 
-  std::string result = "size\truntime\n";
+  std::string result = format("size\truntime (%s)\n", model.c_str());
 
   for(int S=32; S<=2048; S += 128) {
 

@@ -17,8 +17,8 @@ int main(int argc, char* argv[])
   unsigned workload {10};
   app.add_option("-w,--workload", workload, "workload amount (default=10)");
 
-  std::string model = "job";
-  app.add_option("-m,--model", model, "model name tbb|omp|tf|asio|seq|job (default=tf)")
+  std::string model = "asio";
+  app.add_option("-m,--model", model, "model name seq|omp|tf|asio|tbb|job (default=tf)")
      ->check([] (const std::string& m) {
         if(m != "tbb" && m != "omp" && m != "tf" && m != "asio" && m != "job" && m != "seq") {
           return "model name should be \"tbb\", \"omp\", \"seq\", \"asio\", \"job\", or \"tf\"";
@@ -28,7 +28,8 @@ int main(int argc, char* argv[])
 
   CLI11_PARSE(app, argc, argv);
 
-  runBenchmark(model, num_threads, num_rounds, inner_loop, workload);
+  std::string info = runBenchmark(model, num_threads, num_rounds, inner_loop, workload);
+  std::cout << std::setw(12) << info << std::endl;
 
   return 0;
 }
