@@ -41,7 +41,7 @@ std::string wavefront(
 
   std::string result = format("size\truntime (%s)\n", model.c_str());
 
-  for(int S=32; S<=2048; S += 128) {
+  for(int S=32; S<=4096; S += 128) {
 
     M = N = S;
     B = 8;
