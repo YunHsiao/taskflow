@@ -1,5 +1,5 @@
 // Program: tfprof
-// Author: twhuang
+// Author: Dr. Tsung-Wei Huang
 'use strict';
 
 const tfp = {
@@ -79,10 +79,17 @@ const tfp = {
   transDuration: 700,
 
   // data field
-  zoomXs: [],    // scoped time data
-  zoomY : null,  // scoped worker
+  zoomXs: [],       // scoped time data
+  zoomY : null,     // scoped worker
+  view  : "Cluster",  // default view type
+  limit : 256,
+  maxLimit: 512,
   data: null,
-    
+  tfpFile: null,
+  numTasks: null,
+  numExecutors: null,
+  numWorkers: null, 
+  
   timeFormat : function(d) {
     if(d >= 1e9) return `${(d/1e9).toFixed(2)}G`;
     if(d >= 1e6) return `${(d/1e6).toFixed(1)}M`;
@@ -91,325 +98,57 @@ const tfp = {
   }
 };
 
-//const simple_file = "js/simple.json";
-//const simple_file = "js/wb_dma.json";
-
 async function fetchTFPData(file) {
   const response = await fetch(file);
   const json = await response.json();
   return json;
 }
 
-class Database {
+async function queryInfo() {
 
-  constructor (rawData, maxSegments=500) {
+  const response = await fetch(`/queryInfo`, {
+    method: 'put'
+  });
+  
+  let info = await response.json();
 
-    this.data = [];
-    this.maxSegments = maxSegments;
-    this.indexMap = new Map();
+  tfp.tfpFile = info.tfpFile;
+  tfp.numTasks = info.numTasks;
+  tfp.numExecutors = info.numExecutors;
+  tfp.numWorkers = info.numWorkers;
+  tfp.maxLimit = Math.max(1, Math.min(tfp.maxLimit, tfp.numTasks));
+  tfp.limit = Math.min(tfp.limit, tfp.maxLimit)
+}
 
-    let numSegs = 0, minX = null, maxX = null, k=0;
+async function queryData(zoomX, zoomY, view, limit) {
 
-    const begParse = performance.now();
+  //console.log(zoomY);
+  //$('#tfp_tb_loader').css("display", "block");
 
-    for (let i=0, ilen=rawData.length; i<ilen; i++) {
-      const E = rawData[i].executor;
-      for (let j=0, jlen=rawData[i].data.length; j<jlen; j++) {
-        
-        let slen = rawData[i].data[j].data.length;
-        const W = rawData[i].data[j].worker;
-        const L = rawData[i].data[j].level;
+  const response = await fetch(`/queryData`, {
+    method: 'put', 
+    body: JSON.stringify({
+      zoomX: zoomX,
+      zoomY: zoomY,
+      view : view,
+      limit: limit
+    })
+  });
 
-        this.data.push({
-          executor: `${E}`,
-          worker  : `E${E}.W${rawData[i].data[j].worker}.L${L}`,
-          level   : `${L}`,
-          segs    : rawData[i].data[j].data,
-          range   : [0, slen]
-        });
-        
-        if(slen > 0) {
-          let b = rawData[i].data[j].data[0].span[0];
-          let e = rawData[i].data[j].data[slen-1].span[1];
-          if(minX == null || b < minX) minX = b;
-          if(maxX == null || e > maxX) maxX = e; 
-          numSegs += slen;
-        }
+  tfp.data = await response.json();
 
-        this.indexMap.set(`${this.data[this.data.length-1].worker}`, k);
-        k = k+1;
-      }
-    }
+  //console.log(tfp.data);
+  
+  let eMeta = tfp.data.reduce((res, item) => {
+    res[item.executor] = [...res[item.executor] || [], item.worker];
+    return res;
+  }, {});
 
-    this.numSegs = numSegs;
-    this.minX = minX;
-    this.maxX = maxX;
-  }
-
-  query(zoomX = null, zoomY = null) {
-
-    //fetch(`/query`, {
-    //  method: 'post', 
-    //  body: `{zoomX: "${zoomX}", zoomY: "${zoomY}"}`
-    //}).then(function(response) {
-    //  console.log(response);
-    //  return response.json();
-    //}).then(function(data) {
-    //  console.log(data);
-    //});
-    //response.text().then(function(text) {
-    //    console.log(text);
-    //  });
-    //});
-
-    // default selection is the entire region
-    if(zoomX == null) {
-      zoomX = [this.minX, this.maxX];
-    }
-    
-    if(zoomY == null) {
-      //zoomY = [...Array(this.data.length).keys()]
-      zoomY = d3.range(0, this.data.length);
-    }
-    else {
-      zoomY = zoomY.map(d => this.indexMap.get(d));
-    }
-
-    //console.log(zoomY)
-
-    console.assert(zoomX[0] <= zoomX[1]);
-
-    let R = 0;
-    let S = [];
-    let G = [];
-    
-    // find out the segs in the range
-    for(let y=0; y<zoomY.length; ++y) {
-
-      const w = zoomY[y];
-
-      const slen = this.data[w].segs.length;
-            
-      let l = null, r = null, beg, end, mid;
-
-      // r = maxArg {span[0] <= zoomX[1]}
-      beg = 0, end = slen;
-      while(beg < end) {
-        mid = (beg + end) >> 1;
-        if(this.data[w].segs[mid].span[0] <= zoomX[1]) {
-          beg = mid + 1;
-          r = (r == null) ? mid : Math.max(mid, r);
-        }
-        else {
-          end = mid;
-        }
-      }
-
-      if(r == null) {
-        this.data[w].range = [0, 0];
-        continue;
-      }
-
-      // l = minArg {span[1] >= zoomX[0]}
-      beg = 0, end = slen;
-      while(beg < end) {
-        mid = (beg + end) >> 1;
-        if(this.data[w].segs[mid].span[1] >= zoomX[0]) {
-          end = mid;
-          l = (l == null) ? mid : Math.min(mid, l);
-        }
-        else {
-          beg = mid + 1;
-        }
-      };
-
-      if(l == null || l > r) {
-        this.data[w].range = [0, 0];
-        continue;
-      }
-
-      // range ok
-      this.data[w].range = [l, r+1];
-      R += (r+1-l);
-      //console.log(`  ${this.data[w].worker} has ${r+1-l} segs`);
-
-      for(let s=l; s<=r; s++) {
-        if(s != r) {
-          G.push({w:w, s:s, d: this.data[w].segs[s+1].span[0] - this.data[w].segs[s].span[1]});
-        }
-        this.data[w].segs[s].cluster = [s, s];
-      }
-    }
-
-    G.sort((a, b) => a.d - b.d);
-
-    let g = 0, remain = R;
-    while(remain > this.maxSegments && g < G.length) {
-
-      const w = G[g].w;
-      const s = G[g].s;
-      const a = this.data[w].segs[s].cluster;
-      const b = this.data[w].segs[s+1].cluster;
-
-      this.data[w].segs[a[0]].cluster[1] = b[1];
-      this.data[w].segs[b[1]].cluster[0] = a[0];
-      
-      g++;
-      remain--;
-    }
-    
-    //console.log(this.data);
-
-    let numDrawn = 0;
-
-    for(let y=0; y<zoomY.length; ++y){
-      
-      let T=0, st=0, dt=0, gt=0, ct=0, mt=0, at=0;
-
-      const w = zoomY[y];
-      const N = this.data[w].range[1]-this.data[w].range[0];
-      
-      let b = this.data[w].range[0];
-      let s = [];
-
-      while(b < this.data[w].range[1]) {
-
-        const e = this.data[w].segs[b].cluster[1];
-
-        console.assert(b == this.data[w].segs[b].cluster[0]);
-        console.assert(e <  this.data[w].segs.length);
-        
-        if(b == e) {
-          s.push(this.data[w].segs[b]);
-        }
-        else {
-          s.push({
-            span: [this.data[w].segs[b].span[0], this.data[w].segs[e].span[1]],
-            name: "-",
-            type: "clustered",
-            cluster: [b, e]
-          });
-        }
-
-        for(let i=b; i<=e; i++) {
-          const t = this.data[w].segs[i].span[1] - this.data[w].segs[i].span[0];
-          T += t;
-          // cumulate data
-          switch(this.data[w].segs[i].type) {
-            case "static"   : st += t; break;
-            case "subflow"  : dt += t; break;
-            case "cudaflow" : gt += t; break;
-            case "condition": ct += t; break;
-            case "module"   : mt += t; break;
-            case "async"    : at += t; break;
-            default         : console.assert(false); break;
-          }
-        }
-        numDrawn++; 
-        b = e+1;
-      }
-
-      let load = [], x=0;
-
-      load.push({type: "static",    span: [x, x+st], ratio: (st/T*100).toFixed(2)}); 
-      x += st;
-      load.push({type: "subflow",   span: [x, x+dt], ratio: (dt/T*100).toFixed(2)}); 
-      x += dt;
-      load.push({type: "cudaflow",  span: [x, x+gt], ratio: (gt/T*100).toFixed(2)}); 
-      x += gt;
-      load.push({type: "condition", span: [x, x+ct], ratio: (ct/T*100).toFixed(2)}); 
-      x += ct;
-      load.push({type: "module",    span: [x, x+mt], ratio: (mt/T*100).toFixed(2)}); 
-      x += mt;
-      load.push({type: "async",     span: [x, x+at], ratio: (at/T*100).toFixed(2)}); 
-      x += at;
-      
-      S.push({
-        executor: this.data[w].executor,
-        worker: this.data[w].worker,
-        tasks: N,
-        segs: s,
-        load: load,
-        totalTime: T
-      });
-    }
-
-    //console.log("resolution:", R, numDrawn);
-
-    /*// prune to select segs
-    const P = R <= this.maxSegments ? 
-      1 : Math.pow(2, Math.ceil(Math.log2(R / this.maxSegments)));
-
-    console.log("group size", P);
-
-    // find out the segs in the range
-    for(let y=0; y<zoomY.length; ++y) {
-      
-      let T=0, st=0, dt=0, gt=0, ct=0, mt=0;
-
-      const w = zoomY[y];
-      const N = this.data[w].range[1]-this.data[w].range[0];
-      
-      let b = this.data[w].range[0];
-      let s = [];
-      while(b < this.data[w].range[1]) {
-        let e = Math.min(b+P, this.data[w].range[1]);
-
-        if(e - b == 1) {
-          s.push(this.data[w].segs[b]);
-        }
-        else {  // group
-          s.push({
-            span: [this.data[w].segs[b].span[0], this.data[w].segs[e-1].span[1]],
-            name: "-",
-            type: "clustered"
-          });
-        }
-        
-        for(let i=b; i<e; i++) {
-          const t = this.data[w].segs[i].span[1] - this.data[w].segs[i].span[0];
-          T += t;
-          // cumulate data
-          switch(this.data[w].segs[i].type) {
-            case "static"   : st += t; break;
-            case "subflow"  : dt += t; break;
-            case "cudaflow" : gt += t; break;
-            case "condition": ct += t; break;
-            case "module"   : mt += t; break;
-            default         : console.assert(false); break;
-          }
-        }
-
-        b = e;
-      }
-      
-      let load = [], x=0;
-
-      load.push({type: "static",    span: [x, x+st], ratio: (st/T*100).toFixed(2)}); x += st;
-      load.push({type: "subflow",   span: [x, x+dt], ratio: (dt/T*100).toFixed(2)}); x += dt;
-      load.push({type: "cudaflow",  span: [x, x+gt], ratio: (gt/T*100).toFixed(2)}); x += gt;
-      load.push({type: "condition", span: [x, x+ct], ratio: (ct/T*100).toFixed(2)}); x += ct;
-      load.push({type: "module",    span: [x, x+mt], ratio: (mt/T*100).toFixed(2)}); x += mt;
-      
-      S.push({
-        executor: this.data[w].executor,
-        worker: this.data[w].worker,
-        tasks: N,
-        segs: s,
-        load: load,
-        totalTime: T
-      });
-    }*/
-
-
-    return S;
-  }
-
-  minX() { return this.minX; }
-
-  maxX() { return this.maxX; }
-
-  numSegs() { return this.numSegs; }
+  tfp.eMeta = Object.keys(eMeta).map(e => { 
+    return {executor: e, workers: eMeta[e]} 
+  });
+  
+  //$('#tfp_tb_loader').css("display", "none");
 }
 
 function _adjustDim() {
@@ -444,9 +183,9 @@ function _render_tlXAxis() {
   tfp.tlXAxis.scale(tfp.tlXScale)
     .tickSizeOuter(0)
     .tickSize(-tfp.tlH)
-    .tickFormat(tfp.timeFormat);
+    .tickFormat(tfp.timeFormat)
     //.tickFormat(d3.format('.2s'))
-    //.ticks(numXTicks(tfp.tlW));
+    .ticks(numXTicks(tfp.tlW));
   
   tfp.tlG.select('g.tfp-tl-x-axis')
     .attr('transform', `translate(0, ${tfp.tlH})`)
@@ -600,11 +339,11 @@ function _render_tlSegs() {
         .attr('y', d => tfp.segHOfst)
         .style('fill', d => tfp.zColorMap.get(d.type));
     })
-    .on('click', d=>{
+    .on('click', async function(d) {
       const zoomX = d.span;
       //console.log("zoom to ", zoomX);
       tfp.zoomXs.push(zoomX);
-      _onZoomX(zoomX, true);
+      await _onZoomX(zoomX, true);
     })
   );
 
@@ -641,7 +380,8 @@ function _render_ovXAxis() {
   tfp.ovXAxis.scale(tfp.ovXScale)
     .tickSizeOuter(0)
     .tickSize(-tfp.ovH)
-    .tickFormat(tfp.timeFormat);
+    .tickFormat(tfp.timeFormat)
+    .ticks(numXTicks(tfp.tlW));
 
   tfp.ovG.select('g.tfp-ov-x-axis')
     .attr('transform', `translate(0, ${tfp.ovH})`)
@@ -663,7 +403,7 @@ function _render_ovInfo() {
     .attr('x', tfp.ovW + tfp.innerW)
     .attr('y', tfp.ovH/2)
     .attr('font-size', 16)
-    .html(`&#10144; ${d3.sum(tfp.data, d=>d.tasks)} tasks`);
+    .html(`${d3.sum(tfp.data, d=>d.tasks)} tasks`);
 }
 
 function _render_ov() {
@@ -800,9 +540,9 @@ function _render_load() {
 
 function _render_rankGraph() {
     
-  var from = Math.max(0, Math.round($('#tfp_menu_rank_from').val()) - 1);
-  var to   = Math.round($('#tfp_menu_rank_to').val());
-  var limit = (from >= to) ? [0, 50] : [from, to]
+  //var from = Math.max(0, Math.round($('#tfp_tb_rank_from').val()) - 1);
+  //var to   = Math.round($('#tfp_tb_rank_to').val());
+  //var limit = (from >= to) ? [0, 50] : [from, to]
 
   // process data
   let rank = [];
@@ -815,7 +555,8 @@ function _render_rankGraph() {
     }
   }
 
-  rank = rank.sort((a, b) => b[2] - a[2]).slice(limit[0], limit[1]);
+  //rank = rank.sort((a, b) => b[2] - a[2]).slice(limit[0], limit[1]);
+  rank = rank.sort((a, b) => b[2] - a[2]);
   
   // x-axis
   tfp.rankXScale.domain(rank).range([0, tfp.rankW]).padding(0.2);
@@ -883,7 +624,7 @@ function _render_rankGraph() {
 
   // xlabel
   tfp.rankG.select('text.tfp-rank-label')
-    .html(`Top ${limit[0]+1}-${limit[0]+rank.length} Critical Tasks`);
+    .html(`Top-${rank.length} Critical Tasks`);
 }
 
 function _render_rank() {
@@ -898,9 +639,9 @@ function _render_rank() {
   _render_rankGraph();
 }
 
-function _onZoomX(zoomX, refreshBrush) {
+async function _onZoomX(zoomX, refreshBrush) {
 
-  queryData(zoomX, tfp.zoomY);
+  await queryData(zoomX, tfp.zoomY, tfp.view, tfp.limit);
   _render_tlXAxis();
   _render_tlSegs();
   _render_loadXAxis();
@@ -914,23 +655,47 @@ function _onZoomX(zoomX, refreshBrush) {
   }
 }
 
-function queryData(zoomX, zoomY) {
-
-  tfp.data = tfp.db.query(zoomX, zoomY);
-
-  let eMeta = tfp.data.reduce((res, item) => {
-    res[item.executor] = [...res[item.executor] || [], item.worker];
-    return res;
-  }, {});
-
-  tfp.eMeta = Object.keys(eMeta).map(e => { return {executor: e, workers: eMeta[e]} });
-}
-
 function numXTicks(W) {
   return Math.max(2, Math.min(12, Math.round(W * 0.012)));
 }
 
 async function main() {
+  
+  await queryInfo();
+  
+  $('#tfp_tb_finfo').text(tfp.tfpFile.split(/(\\|\/)/g).pop()); // filename
+  $('#tfp_tb_tinfo').text(`${tfp.numTasks} tasks`);
+  $('#tfp_tb_einfo').text(`${tfp.numExecutors} executors`);
+  $('#tfp_tb_winfo').text(`${tfp.numWorkers} workers`);
+
+  await queryData(null, null, tfp.view, tfp.limit);
+
+  let minX = null, maxX = null;
+
+  for(let i=0; i<tfp.data.length; i++) {
+    let l = tfp.data[i].segs.length;
+    if(l > 0) {
+      if(minX == null || tfp.data[i].segs[0].span[0] < minX) {
+        minX = tfp.data[i].segs[0].span[0];
+      }
+      if(maxX == null || tfp.data[i].segs[l-1].span[1] > maxX) {
+        maxX = tfp.data[i].segs[l-1].span[1];
+      }
+    }
+  }
+  
+  tfp.ovXDomain = [minX, maxX];
+  tfp.ovXSel = [minX, maxX];
+  tfp.zoomXs = [[minX, maxX]];
+  tfp.zoomY = tfp.data.map(d=>d.worker);
+  
+  // adjust the margin to the current nav
+  tfp.topMargin += $('nav').outerHeight(true);
+  
+  // clean-up the loader 
+  $('#tfp_loader').css("display", "none");
+  $('#tfp_toolbar').css("display", "block")
+  $('#tfp').css("display", "block");
   
   // initialize static field
   tfp.dom = d3.select('#tfp');
@@ -970,7 +735,7 @@ async function main() {
       _render_ovBrush();
     }
   })
-  .on('end', function() { 
+  .on('end', async function() { 
 
     if(!d3.event.sourceEvent) return;
 
@@ -981,7 +746,7 @@ async function main() {
       const zoomX = s.map(tfp.tlXScale.invert);
       //console.log("zoom to ", zoomX);
       tfp.zoomXs.push(zoomX);
-      _onZoomX(zoomX, false);
+      await _onZoomX(zoomX, false);
 
       tfp.tlG.select("g.tfp-tl-brush").call(tfp.tlBrush.move, null);
     }
@@ -1002,19 +767,19 @@ async function main() {
           }
           else break;
         }
-        _onZoomX(tfp.zoomXs[tfp.zoomXs.length-1], true);
+        await _onZoomX(tfp.zoomXs[tfp.zoomXs.length-1], true);
       }
     }
   });
 
   // ov brush event
-  tfp.ovBrush.on('end', function() {
+  tfp.ovBrush.on('end', async function() {
     if(d3.event.sourceEvent && d3.event.selection) {
       if(d3.event.sourceEvent.type === "mouseup") {
         const zoomX = d3.event.selection.map(tfp.ovXScale.invert);
         //console.log("ovBrush fires zoomX", zoomX);
         tfp.zoomXs.push(zoomX);
-        _onZoomX(zoomX, false);
+        await _onZoomX(zoomX, false);
       }
     }
   });
@@ -1061,62 +826,8 @@ async function main() {
 
   tfp.svg.call(tfp.rankTooltip);
   
-  //let begFetch = performance.now();
-  //const res = await fetchTFPData(simple_file);
-  //let endFetch = performance.now();
 
-  render_simple();
-}
-
-function _adjust_menu() {
-  
-  // worker menu
-  var wmenu = d3.select('#tfp_menu_workers').selectAll('a').data(tfp.db.data);
-
-  wmenu.selectAll('input').remove();
-  wmenu.selectAll('label').remove();
-
-  wmenu.exit().remove();
-  
-  wmenu = wmenu.merge(wmenu.enter().append('a')
-    .attr('class', 'dropdown-item')
-    //.attr('data-value', d => d.worker)
-    //.attr('tabIndex', '-1')
-    //.on('mouseover', tfp.executorTooltip.show)
-    //.on('mouseout', tfp.executorTooltip.hide);
-  );
-  
-  wmenu.append('input')
-    .attr('type', 'checkbox')
-    .attr('class', 'mr-2')
-    .attr('value', d=>d.worker)
-    .attr('id', d=>d.worker)
-    .property('checked', true)
-    .attr('name', 'worker');
-
-  wmenu.append('label').attr('for', d=>d.worker).text(d => {
-    const wl = d.worker.split('.');
-    return `${d.worker} (Executor ${wl[0]} / Worker ${wl[1]} @ Level ${wl[2]})`
-  });
-  
-  // rank menu
-  document.getElementById('tfp_menu_rank_from').value = 1;
-  document.getElementById('tfp_menu_rank_to').value = 50;
-}
-
-function feed(input) {
-
-  // database wide
-  tfp.db = new Database(input);
-  tfp.ovXDomain = [tfp.db.minX, tfp.db.maxX];
-  tfp.ovXSel = [tfp.db.minX, tfp.db.maxX];
-  tfp.zoomXs = [[tfp.db.minX, tfp.db.maxX]];  // clear cached data
-  tfp.zoomY  = Array.from(tfp.db.indexMap.keys())
-
-  _adjust_menu();
-  
-  // data wide
-  queryData(tfp.zoomXs[tfp.zoomXs.length-1], tfp.zoomY);
+  _adjust_tb();
   _adjustDim();
   _render_tl();
   _render_load();
@@ -1124,74 +835,53 @@ function feed(input) {
   _render_rank();
 }
 
-function render_simple() {
-  $('#tfp_textarea').text(JSON.stringify(simple));
-  feed(simple);
-}
+function _adjust_tb() {
+  
+  // worker tb
+  var wtb = d3.select('#tfp_tb_workers').selectAll('a').data(tfp.data);
 
-function render_composition() {
-  $('#tfp_textarea').text(JSON.stringify(composition));
-  feed(composition);
-}
+  wtb.selectAll('input').remove();
+  wtb.selectAll('label').remove();
 
-function render_inference() {
-  $('#tfp_textarea').text(JSON.stringify(inference))
-  feed(inference);
-}
+  wtb.exit().remove();
+  
+  wtb = wtb.merge(wtb.enter().append('a')
+    .attr('class', 'dropdown-item')
+    //.attr('data-value', d => d.worker)
+    //.attr('tabIndex', '-1')
+    //.on('mouseover', tfp.executorTooltip.show)
+    //.on('mouseout', tfp.executorTooltip.hide);
+  );
+  
+  wtb.append('input')
+    .attr('type', 'checkbox')
+    .attr('class', 'mr-2')
+    .attr('value', d=>d.worker)
+    .attr('id', d=>d.worker)
+    .property('checked', true)
+    .attr('name', 'worker');
 
-function render_dreamplace() {
-  $('#tfp_textarea').text(JSON.stringify(dreamplace))
-  feed(dreamplace);
+  wtb.append('label').attr('for', d=>d.worker).text(d => {
+    const wl = d.worker.split('.');
+    return `${d.worker} (Executor ${wl[0]}::Worker ${wl[1]} @ Level ${wl[2]})`
+  });
+
+  // limit tb
+  let numTasks = d3.sum(tfp.data, d=>d.segs.length);
+  let limit = document.getElementById('tfp_tb_limit');
+  limit.min = 1;
+  limit.max = tfp.maxLimit;
+  limit.value = tfp.limit;
+  
+  // rank tb
+  //document.getElementById('tfp_tb_rank_from').value = 1;
+  //document.getElementById('tfp_tb_rank_to').value = 50;
 }
 
 main();
 
 // ---- jquery ----
-
-$('#tfp_composition').on('click', function() {
-  render_composition();
-})
-
-$('#tfp_inference').on('click', function() {
-  render_inference();
-})
-
-$('#tfp_dreamplace').on('click', function() {
-  render_dreamplace();
-})
-
-// textarea changer event
-$('#tfp_textarea').on('input propertychange paste', function() {
-
-  if($(this).data('timeout')) {
-    clearTimeout($(this).data('timeout'));
-  }
-
-  $(this).data('timeout', setTimeout(()=>{
-    
-    var text = $('#tfp_textarea').val().trim();
-    
-    $('#tfp_textarea').removeClass('is-invalid');
-
-    if(!text) {
-      return;
-    }
-    
-    try {
-      var json = JSON.parse(text);
-      //console.log(json);
-      feed(json);
-    }
-    catch(e) {
-      $('#tfp_textarea').addClass('is-invalid');
-      console.error(e);
-    }
-
-  }, 2000));
-});
-
-
-$('#tfp_menu_workers').on('click', function( event ) {
+$('#tfp_tb_workers').on('click', async function( event ) {
   
   event.stopPropagation();  // keep dropdown alive
 
@@ -1204,12 +894,10 @@ $('#tfp_menu_workers').on('click', function( event ) {
 
   //console.log(zoomY.join(', '))
   
-  //tfp.ovXDomain = [tfp.db.minX, tfp.db.maxX];
   tfp.ovXSel = tfp.zoomXs[tfp.zoomXs.length-1];
-  //tfp.zoomXs = [[tfp.db.minX, tfp.db.maxX]];  // clear cached data
   tfp.zoomY  = zoomY;
 
-  queryData(tfp.zoomXs[tfp.zoomXs.length-1], tfp.zoomY);
+  await queryData(tfp.zoomXs[tfp.zoomXs.length-1], tfp.zoomY, tfp.view, tfp.limit);
 
   //console.log(tfp.data)
 
@@ -1220,27 +908,74 @@ $('#tfp_menu_workers').on('click', function( event ) {
   _render_rank();
 });
 
-$('#tfp_menu_rank').on('input', function (event) {
+$('#tfp_tb_view a').on('click', async function() {
+
+  //event.stopPropagation();  // keep dropdown alive
+
+  tfp.view = $(this).text();
+
+  //console.log($(this).siblings('.hidden').text());
+  $(this).parent().siblings('.btn').text($(this).text());
+
+  tfp.ovXSel = tfp.zoomXs[tfp.zoomXs.length-1];
   
-  event.stopPropagation();
-  
+  await queryData(tfp.zoomXs[tfp.zoomXs.length-1], tfp.zoomY, tfp.view, tfp.limit);
+
+  _render_tl();
+  _render_load();
+  _render_ov();
+  _render_rank();
+})
+
+//$('#tfp_tb_rank').on('input', function (event) {
+//  
+//  event.stopPropagation();
+//  
+//  if($(this).data('timeout')) {
+//    clearTimeout($(this).data('timeout'));
+//  }
+//
+//  // get selected option and change background
+//  $(this).data('timeout', setTimeout(()=>{
+//    _render_rankGraph();
+//  }, 1000));
+//})
+
+$('#tfp_tb_reset_zoom').on('click', async function() {
+  tfp.zoomXs = [tfp.ovXDomain];  // clear cached data
+  await _onZoomX(tfp.zoomXs[tfp.zoomXs.length-1], true);
+})
+
+$('#tfp_tb_limit').on('input change', function (){
+
+  $(this).siblings('.btn').text($(this).val());
+
   if($(this).data('timeout')) {
     clearTimeout($(this).data('timeout'));
   }
 
   // get selected option and change background
-  $(this).data('timeout', setTimeout(()=>{
-    _render_rankGraph();
+  $(this).data('timeout', setTimeout(async ()=>{
+    tfp.limit = +$(this).val();
+    tfp.ovXSel = tfp.zoomXs[tfp.zoomXs.length-1];
+  
+    await queryData(tfp.zoomXs[tfp.zoomXs.length-1], tfp.zoomY, tfp.view, tfp.limit);
+
+    _render_tl();
+    _render_load();
+    _render_ov();
+    _render_rank();
   }, 1000));
 })
 
-$('#tfp_menu_reset_zoom').on('click', function() {
-  tfp.zoomXs = [[tfp.db.minX, tfp.db.maxX]];  // clear cached data
-  _onZoomX(tfp.zoomXs[tfp.zoomXs.length-1], true);
-})
-
-
-
+//$(document).ready(function() {
+//  const $valueButton = $('.tfp_tb_limit_button');
+//  const $value = $('#tfp_tb_limit');
+//  $valueButton.html($value.val());
+//  $value.on('input change', () => {
+//    $valueButton.html($value.val());
+//  });
+//});
 
 
 

@@ -26,80 +26,97 @@
 <!-- BEG BODY -->
   <body>
     
-    <nav class="navbar navbar-expand-sm mb-3 navbar-dark bg-dark">
-      <!-- Brand -->
-      <a class="navbar-brand" href=""><img src="images/logo.png" alt="Logo" style="width:40px;"> Taskflow Profiler</a>
+    <!--<nav class="navbar navbar-expand-sm mb-3 navbar-dark bg-dark">-->
+    <nav class="navbar navbar-expand-md mb-2 navbar-dark fixed-top bg-dark" >
+      <!-- Brand
+      <a class="navbar-brand" href=""><img src="images/logo.png" alt="Logo" style="width:40px;"></a>-->
+
       <!-- left-side navbar -->
-      <ul class="navbar-nav mr-auto">
-        <!--<li class="nav-item"><a class="nav-link" href="">MainBoard</a></li>-->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbardrop" data-toggle="dropdown">
-            Examples
-          </a>
-          <div class="dropdown-menu">
-            <a class="dropdown-item" id="tfp_composition" href="#">Hierarchical Composition</a>
-            <a class="dropdown-item" id="tfp_inference" href="#">Machine Learning Inference</a>
-            <a class="dropdown-item" id="tfp_dreamplace" href="#">Integrated Circuit Placement</a>
-          </div>
-        </li>
-      </ul>
-      <!-- right-side navbar 
-      <form class="form-inline my-2 my-lg-0" action="https://github.com/taskflow/tfprof">
-        <button class="btn btn-primary my-2 my-sm-0" type="submit">GitHub</button>
-      </form>-->
-      <a class="btn btn-primary" href="https://github.com/taskflow/tfprof" role="button">GitHub</a>
-      <a class="btn btn-light ml-2" href="https://taskflow.github.io/" role="button">Project Page</a>
-    </nav>
-
-    <div class="mb-2 btn-toolbar" role="toolbar" style="margin-left: 100px">
-
-      <!-- tfp-menu-workers -->
-      <div class="btn-group" role="group">
-        <button type="button" class="btn btn-outline-info dropdown-toggle" data-toggle="dropdown">Select Workers</button>
-        <div class="dropdown-menu tfp-menu-workers" id="tfp_menu_workers"></div>
-      </div>
-      
-
-
-      <!-- tfp-menu-rank -->
-      <div class="btn-group" role="group">
-        <button type="button" class="btn btn-outline-success ml-2 dropdown-toggle" data-toggle="dropdown">Select Rank</button>
-        <div class="dropdown-menu tfp-menu-rank" id="tfp_menu_rank">
-          <!--<a class="dropdown-item tfp-menu-rank-10">top 1-10</a>-->
-          <a class="dropdown-item">
-            <input class="mr-2" type="number" value="" min="1" id="tfp_menu_rank_from">
-            <label> (From)</label>
-          </a>
-          <a class="dropdown-item">
-            <input class="mr-2" type="number" value="" min="1" id="tfp_menu_rank_to">
-            <label> (to)</label>
-          </a>
+      <div class="btn-group mr-2" role="group">
+        <button type="button" class="btn btn-outline-success btn-sm dropdown-toggle" data-toggle="dropdown">View</button>
+        <div class="dropdown-menu tfp-tb-view" id="tfp_tb_view">
+          <a class="dropdown-item">Cluster</a>
+          <a class="dropdown-item">Criticality</a>
         </div>
       </div>
       
-      
-      <!-- tfp-menu-reset -->
-      <div class="btn-group" role="group">
-        <button type="button" class="btn btn-outline-secondary ml-2" id="tfp_menu_reset_zoom">Reset Zoom</button>
+      <!-- tfp-tb-workers -->
+      <div class="btn-group mr-2" role="group">
+        <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-toggle="dropdown">Workers</button>
+        <div class="dropdown-menu tfp-tb-workers" id="tfp_tb_workers"></div>
+      </div> 
+
+      <!-- tfp-tb-reset -->
+      <div class="btn-group mr-2" role="group">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="tfp_tb_reset_zoom">Zoom</button>
+      </div> 
+    
+      <!-- tfp-tb-limit -->
+      <div class="btn-group mr-2" role="group">
+        <input id="tfp_tb_limit" class="border-0 mr-2" type="range" />
+        <button type="button" class="btn btn-primary btn-sm">Limit</button>
       </div>
 
-    </div>
+      <ul class="navbar-nav mr-auto">
+        <!--<li class="nav-item"><a class="nav-link" href="">MainBoard</a></li>-->
+      </ul>
+
+      <button type="button" class="btn btn-light btn-sm">
+        <span class="badge" id="tfp_tb_finfo"></span>
+        <span class="badge badge-info" id="tfp_tb_einfo">- executors</span>
+        <span class="badge badge-info" id="tfp_tb_winfo">- workers</span>
+        <span class="badge badge-info" id="tfp_tb_tinfo">- tasks</span>
+      </button>
+    </nav>
+    
+    <!-- loader -->
+    <div class="container loader" id="tfp_loader"></div>
+    
+    <!-- toolbar -->
+    <div class="btn-toolbar" role="toolbar" style="margin-left: 100px; display:none;" id="tfp_toolbar">
       
+      <!-- tfp-tb-view
+      <div class="btn-group mb-2 mr-2" role="group">
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-toggle="dropdown">View</button>
+        <div class="dropdown-menu tfp-tb-view" id="tfp_tb_view">
+          <a class="dropdown-item">Cluster</a>
+          <a class="dropdown-item">Criticality</a>
+        </div>
+      </div> -->
+
+      <!-- tfp-tb-workers
+      <div class="btn-group mb-2 mr-2" role="group">
+        <button type="button" class="btn btn-outline-info dropdown-toggle" data-toggle="dropdown">Workers</button>
+        <div class="dropdown-menu tfp-tb-workers" id="tfp_tb_workers"></div>
+      </div> -->
+
+      <!-- tfp-tb-reset
+      <div class="btn-group mb-2 mr-2" role="group">
+        <button type="button" class="btn btn-outline-secondary" id="tfp_tb_reset_zoom">Reset Zoom</button>
+      </div> -->
+      
+      <!-- tfp-tb-limit
+      <div class="btn-group mb-2 mr-2" role="group">
+        <input id="tfp_tb_limit" class="border-0 mr-2" type="range" />
+        <button type="button" class="btn btn-primary">Limit</button>
+      </div>-->
+      
+      <!-- tfp-tb-loader 
+      <div class="btn-group mb-2" role="group">
+        <div class="spinner-grow text-dark" role="status" style="display:none" id="tfp_tb_loader"></div>
+      </div>-->
+
+
+    </div>
+    
+
+
     <!-- svg -->
-    <div class="container-fluidic" id="tfp"></div>
-
-    <div class="form-group mr-4 ml-4 mt-2">
-      <textarea class="form-control" id="tfp_textarea" placeholder="Paste .tfp data" rows="8"></textarea>
-      <div class="invalid-feedback"><p>Wrong format! Please visit: https://github.com/taskflow/tfprof</p>
-      </div>
-    </div>
-
-    <script src="js/simple.js"></script>
-    <script src="js/composition.js"></script>
-    <script src="js/inference.js"></script>
-    <script src="js/dreamplace.js"></script>
+    <div style="display:none;" class="container-fluidic" id="tfp"></div>
+    
+    <!-- js -->
     <script src="js/index.js"></script>
- 
+
     <footer class="page-footer font-small blue">
       <div><br></div>
     </footer>
@@ -107,7 +124,5 @@
   </body>
 
 </html>
-
-
 
 

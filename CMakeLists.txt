@@ -5,16 +5,21 @@ MESSAGE(STATUS "CMAKE_ROOT: " ${CMAKE_ROOT})
 # Project name
 project(Taskflow VERSION 3.0.0 LANGUAGES CXX)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+
+if("${CMAKE_SYSTEM_NAME}" MATCHES "iOS")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+endif()
+
 set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
 set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.cocos.benchmarks")
 
 # build options
-option(TF_BUILD_BENCHMARKS "Enables build of benchmarks" ON)
-option(TF_BUILD_CUDA "Enables build of cuda code" OFF)
-option(TF_BUILD_SYCL "Enables build of sycl code" OFF)
-option(TF_BUILD_TESTS "Enables build of tests" OFF)
-option(TF_BUILD_EXAMPLES "Enables build of examples" OFF)
+option(TF_BUILD_BENCHMARKS "Enables builds of benchmarks" ON)
+option(TF_BUILD_CUDA "Enables builds of cuda code" OFF)
+option(TF_BUILD_SYCL "Enables builds of sycl code" OFF)
+option(TF_BUILD_TESTS "Enables builds of tests" ON)
+option(TF_BUILD_EXAMPLES "Enables builds of examples" OFF)
+option(TF_BUILD_PROFILER "Enables builds of profiler" OFF)
 
 # project-specific variables
 set(TF_INC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
@@ -44,7 +49,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0")
     message(STATUS "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
     message(FATAL_ERROR "\nTaskflow requires clang++ at least v6.0")
-  endif() 
+  endif()
 ## AppleClang
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "8.0")
@@ -55,7 +60,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   add_definitions(/bigobj)
   if(NOT MSVC_VERSION GREATER_EQUAL 1914)
     message(STATUS "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
-    message(FATAL_ERROR "\nTaskflow requires MSVC++ at least v14.14") 
+    message(FATAL_ERROR "\nTaskflow requires MSVC++ at least v14.14")
   endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.0.1")
@@ -88,7 +93,7 @@ if(TF_BUILD_CUDA)
     message(STATUS "CMAKE_CUDA_COMPILER_VERSION: ${CMAKE_CUDA_COMPILER_VERSION}")
     message(FATAL_ERROR "\nTaskflow requires CUDA at least v11")
   endif()
-  
+
   # configure cuBLAS
   message(STATUS "Configuring CUDA BLAS ...")
   list(APPEND CMAKE_MODULE_PATH ${TF_CMAKE_DIR}/cuda/modules/)
@@ -107,8 +112,8 @@ endif()
 # 1. -DComputeCpp_DIR=/path/to/ComputeCpp/
 # 2. -DCOMPUTECPP_BITCODE=ptx64 (default spir64)
 # For example:
-# cmake ../ -DTF_BUILD_SYCL=ON 
-#           -DCOMPUTECPP_BITCODE=ptx64 
+# cmake ../ -DTF_BUILD_SYCL=ON
+#           -DCOMPUTECPP_BITCODE=ptx64
 #           -DComputeCpp_DIR=$COMPUTECPP_HOME
 if(TF_BUILD_SYCL)
   message(STATUS "Configuring ComputeCpp for SYCL ...")
@@ -130,15 +135,15 @@ endif()
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to '${TF_DEFAULT_BUILD_TYPE}'")
   set(
-    CMAKE_BUILD_TYPE "${TF_DEFAULT_BUILD_TYPE}" 
+    CMAKE_BUILD_TYPE "${TF_DEFAULT_BUILD_TYPE}"
     CACHE
-    STRING "Choose the type of build." 
+    STRING "Choose the type of build."
     FORCE
   )
   # Set the possible values of build type for cmake-gui
   set_property(
-    CACHE 
-    CMAKE_BUILD_TYPE 
+    CACHE
+    CMAKE_BUILD_TYPE
     PROPERTY STRINGS
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo"
   )
@@ -180,15 +185,15 @@ endif(TF_BUILD_CUDA)
 add_library(features_settings INTERFACE)
 add_library(tf::features_settings ALIAS features_settings)
 target_compile_definitions(
-  features_settings 
-  INTERFACE 
+  features_settings
+  INTERFACE
   $<$<CXX_COMPILER_ID:MSVC>:_ENABLE_EXTENDED_ALIGNED_STORAGE>
 )
 
 # optimization
 #
 ##! Msvc flags info
-# /Zi - Produces a program database (PDB) that contains type information 
+# /Zi - Produces a program database (PDB) that contains type information
 #       and symbolic debugging information for use with the debugger.
 # /FS - Allows multiple cl.exe processes to write to the same .pdb file
 # /DEBUG - Enable debug during linking
@@ -214,10 +219,10 @@ target_compile_definitions(
 add_library(default_settings INTERFACE)
 add_library(tf::default_settings ALIAS default_settings)
 target_link_libraries(
-  default_settings 
-  INTERFACE 
-  tf::error_settings 
-  #tf::optimize_settings 
+  default_settings
+  INTERFACE
+  tf::error_settings
+  #tf::optimize_settings
   tf::features_settings
 )
 
@@ -283,7 +288,7 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
 target_link_libraries(${PROJECT_NAME} INTERFACE Threads::Threads)
 target_include_directories(${PROJECT_NAME} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:include/> 
+  $<INSTALL_INTERFACE:include/>
 )
 
 #add_library(TaskflowDSL INTERFACE)
@@ -291,7 +296,7 @@ target_include_directories(${PROJECT_NAME} INTERFACE
 #target_link_libraries(TaskflowDSL INTERFACE Threads::Threads)
 #target_include_directories(TaskflowDSL INTERFACE
 #  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-#  $<INSTALL_INTERFACE:include/> 
+#  $<INSTALL_INTERFACE:include/>
 #)
 #
 #add_library(TensorFrame INTERFACE)
@@ -299,18 +304,18 @@ target_include_directories(${PROJECT_NAME} INTERFACE
 #target_link_libraries(TensorFrame INTERFACE Threads::Threads)
 #target_include_directories(TensorFrame INTERFACE
 #  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-#  $<INSTALL_INTERFACE:include/> 
+#  $<INSTALL_INTERFACE:include/>
 #)
 
 # -----------------------------------------------------------------------------
-# profiler program 
+# profiler program
 # -----------------------------------------------------------------------------
 if(TF_BUILD_PROFILER)
   add_subdirectory(tfprof/server)
 endif(TF_BUILD_PROFILER)
 
 # -----------------------------------------------------------------------------
-# Example program 
+# Example program
 # -----------------------------------------------------------------------------
 if(TF_BUILD_EXAMPLES)
   add_subdirectory(examples)
@@ -342,16 +347,16 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/taskflow DESTINATION ${TF_INC_INST
 set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME ${PROJECT_NAME})
 
 export(
-  TARGETS ${PROJECT_NAME} 
-  NAMESPACE ${PROJECT_NAME}:: 
+  TARGETS ${PROJECT_NAME}
+  NAMESPACE ${PROJECT_NAME}::
   FILE ${PROJECT_NAME}Targets.cmake
 )
 export(PACKAGE ${PROJECT_NAME})
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets)
 install(
-  EXPORT ${PROJECT_NAME}Targets 
-  NAMESPACE ${PROJECT_NAME}:: 
+  EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME}::
   DESTINATION ${TF_LIB_INSTALL_DIR}/cmake/${PROJECT_NAME}
 )
 
@@ -366,7 +371,7 @@ configure_package_config_file(
 )
 
 write_basic_package_version_file(
-  ${PROJECT_NAME}ConfigVersion.cmake 
+  ${PROJECT_NAME}ConfigVersion.cmake
   COMPATIBILITY SameMajorVersion
 )
 
@@ -375,4 +380,3 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
   DESTINATION ${TF_LIB_INSTALL_DIR}/cmake/${PROJECT_NAME}
 )
-

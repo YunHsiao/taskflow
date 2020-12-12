@@ -38,6 +38,7 @@ endif()
 
 message(STATUS "OpenMP_VERSION: ${OpenMP_VERSION}")
 message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
+message(STATUS "OpenMP_CXX_INCLUDE_DIR: ${OpenMP_CXX_INCLUDE_DIR}")
 message(STATUS "OpenMP_CXX_LIBRARIES: ${OpenMP_CXX_LIBRARIES}")
 
 # -----------------------------------------------------------------------------
@@ -61,10 +62,8 @@ if(ANDROID)
     IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
     INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
-  set(TBB_IMPORTED_TARGETS
-    tbbmalloc_proxy tbbmalloc  tbb
-  )
 elseif(IOS)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
   set(TBBDIR ${PROJECT_SOURCE_DIR}/tbb-ios)
   add_library(tbb STATIC IMPORTED GLOBAL)
   set_target_properties(tbb PROPERTIES
@@ -81,12 +80,23 @@ elseif(IOS)
     IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
     INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
   )
-  set(TBB_IMPORTED_TARGETS
-    tbb tbbmalloc tbbmalloc_proxy
-  )
 else()
+  set(TBB_BUILD_TESTS OFF)
+  set(TBB_BUILD_STATIC OFF)
+  set(TBB_BUILD_SHARED ON)
   add_subdirectory(${TF_3RD_PARTY_DIR}/tbb ${CMAKE_BINARY_DIR}/tbb)
 endif()
+
+set(TBB_IMPORTED_TARGETS
+  tbb tbbmalloc tbbmalloc_proxy
+)
+
+set(EXTERNAL_INCLUDE_DIR
+  ${PROJECT_SOURCE_DIR}/3rd-party
+  ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
+  ${PROJECT_SOURCE_DIR}/3rd-party/boost_1_74_0
+  ${OpenMP_CXX_INCLUDE_DIR}
+)
 
 # -----------------------------------------------------------------------------
 # Benchmarks
@@ -119,11 +129,7 @@ else()
   add_executable(wavefront ${WAVEFRONT_SOURCES})
 endif()
 
-target_include_directories(wavefront PRIVATE
-  ${PROJECT_SOURCE_DIR}/3rd-party
-  ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
-  ${PROJECT_SOURCE_DIR}/3rd-party/boost_1_74_0
-)
+target_include_directories(wavefront PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   wavefront
   ${PROJECT_NAME}
@@ -142,7 +148,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/graph_traversal/seq.cpp
   ${TF_BENCHMARK_DIR}/graph_traversal/taskflow.cpp
 )
-target_include_directories(graph_traversal PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(graph_traversal PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   graph_traversal
   ${PROJECT_NAME}
@@ -160,7 +166,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/binary_tree/omp.cpp
   ${TF_BENCHMARK_DIR}/binary_tree/taskflow.cpp
 )
-target_include_directories(binary_tree PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(binary_tree PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   binary_tree
   ${PROJECT_NAME}
@@ -178,7 +184,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/linear_chain/omp.cpp
   ${TF_BENCHMARK_DIR}/linear_chain/taskflow.cpp
 )
-target_include_directories(linear_chain PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(linear_chain PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   linear_chain
   ${PROJECT_NAME}
@@ -197,7 +203,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/mnist/seq.cpp
   ${TF_BENCHMARK_DIR}/mnist/taskflow.cpp
 )
-target_include_directories(mnist PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(mnist PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   mnist
   ${PROJECT_NAME}
@@ -235,7 +241,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/mandelbrot/tbb.cpp
   ${TF_BENCHMARK_DIR}/mandelbrot/taskflow.cpp
 )
-target_include_directories(mandelbrot PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(mandelbrot PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   mandelbrot
   ${PROJECT_NAME}
@@ -253,7 +259,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/black_scholes/tbb.cpp
   ${TF_BENCHMARK_DIR}/black_scholes/taskflow.cpp
 )
-target_include_directories(black_scholes PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(black_scholes PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   black_scholes
   ${PROJECT_NAME}
@@ -271,7 +277,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/reduce_sum/tbb.cpp
   ${TF_BENCHMARK_DIR}/reduce_sum/taskflow.cpp
 )
-target_include_directories(reduce_sum PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(reduce_sum PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   reduce_sum
   ${PROJECT_NAME}
@@ -289,7 +295,7 @@ add_executable(
   ${TF_BENCHMARK_DIR}/parallel_sort/tbb.cpp
   ${TF_BENCHMARK_DIR}/parallel_sort/taskflow.cpp
 )
-target_include_directories(parallel_sort PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_include_directories(parallel_sort PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   parallel_sort
   ${PROJECT_NAME}
@@ -315,7 +321,7 @@ if(TF_BUILD_CUDA)
   )
 
   target_include_directories(
-    hetero_traversal PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
+    hetero_traversal PRIVATE ${EXTERNAL_INCLUDE_DIR}
   )
 
   target_link_libraries(
