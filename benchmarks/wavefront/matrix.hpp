@@ -16,6 +16,8 @@ extern double **matrix;
 extern unsigned inner_loop;
 extern unsigned workload;
 
+#define COMPUTE_ONLY 1
+
 // nominal operations
 inline double calc(double v0, double v1) {
   double res = v0;
@@ -57,14 +59,24 @@ inline int block_computation(int i, int j){
   int end_i = (i*B+B > M) ? M : i*B+B;
   int start_j = j*B;
   int end_j = (j*B+B > N) ? N : j*B+B;
+  double sum = 0.0;
   for ( int ii = start_i; ii < end_i; ++ii ) {
    for ( int jj = start_j; jj < end_j; ++jj ) {
+#if COMPUTE_ONLY
+     double v0 = ii == 0 ? 0 : 1;
+     double v1 = jj == 0 ? 0 : 1;
+     sum += ii==0 && jj==0 ? 1 : calc(v0,v1);
+#else
      double v0 = ii == 0 ? 0 : matrix[ii-1][jj];
      double v1 = jj == 0 ? 0 : matrix[ii][jj-1];
      matrix[ii][jj] = ii==0 && jj==0 ? 1 : calc(v0,v1);
+#endif
    }
   }
-  return matrix[start_i][start_j];
+#if COMPUTE_ONLY
+  matrix[0][0] = sum;
+#endif
+  return sum;
 }
 
 
