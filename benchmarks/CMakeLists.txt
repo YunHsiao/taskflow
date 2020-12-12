@@ -6,6 +6,14 @@ elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Android")
   set(ANDROID ON)
 endif()
 
+macro (add_cross_platform_executable TARGET)
+  if(ANDROID)
+    add_library(${TARGET} SHARED ${TF_BENCHMARK_DIR}/jni_invoke.cpp ${ARGN})
+  else()
+    add_executable(${TARGET} ${ARGN})
+  endif()
+endmacro (add_cross_platform_executable)
+
 # -----------------------------------------------------------------------------
 # eigen package
 # -----------------------------------------------------------------------------
@@ -103,7 +111,7 @@ set(EXTERNAL_INCLUDE_DIR
 # -----------------------------------------------------------------------------
 
 ## benchmark 1: wavefront computing
-set(WAVEFRONT_SOURCES
+add_cross_platform_executable(wavefront
   ${TF_BENCHMARK_DIR}/benchmark.cpp
   ${TF_BENCHMARK_DIR}/wavefront/main.cpp
   ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
@@ -123,12 +131,6 @@ set(WAVEFRONT_SOURCES
   ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
 )
 
-if(ANDROID)
-  add_library(wavefront SHARED ${TF_BENCHMARK_DIR}/jni_invoke.cpp ${WAVEFRONT_SOURCES} )
-else()
-  add_executable(wavefront ${WAVEFRONT_SOURCES})
-endif()
-
 target_include_directories(wavefront PRIVATE ${EXTERNAL_INCLUDE_DIR})
 target_link_libraries(
   wavefront
@@ -140,7 +142,7 @@ target_link_libraries(
 set_target_properties(wavefront PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 2: graph traversal
-add_executable(
+add_cross_platform_executable(
   graph_traversal
   ${TF_BENCHMARK_DIR}/graph_traversal/main.cpp
   ${TF_BENCHMARK_DIR}/graph_traversal/omp.cpp
@@ -159,7 +161,7 @@ target_link_libraries(
 set_target_properties(graph_traversal PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 3: binary_tree
-add_executable(
+add_cross_platform_executable(
   binary_tree
   ${TF_BENCHMARK_DIR}/binary_tree/main.cpp
   ${TF_BENCHMARK_DIR}/binary_tree/tbb.cpp
@@ -177,7 +179,7 @@ target_link_libraries(
 set_target_properties(binary_tree PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 4: linear_chain
-add_executable(
+add_cross_platform_executable(
   linear_chain
   ${TF_BENCHMARK_DIR}/linear_chain/main.cpp
   ${TF_BENCHMARK_DIR}/linear_chain/tbb.cpp
@@ -195,7 +197,7 @@ target_link_libraries(
 set_target_properties(linear_chain PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 5: MNIST
-add_executable(
+add_cross_platform_executable(
   mnist
   ${TF_BENCHMARK_DIR}/mnist/main.cpp
   ${TF_BENCHMARK_DIR}/mnist/omp.cpp
@@ -214,7 +216,7 @@ target_link_libraries(
 set_target_properties(mnist PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 6: matrix multiplication
-add_executable(
+add_cross_platform_executable(
   matrix_multiplication
   ${TF_BENCHMARK_DIR}/matrix_multiplication/main.cpp
   ${TF_BENCHMARK_DIR}/matrix_multiplication/omp.cpp
@@ -234,7 +236,7 @@ target_link_libraries(
 set_target_properties(matrix_multiplication PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 7: mandelbrot
-add_executable(
+add_cross_platform_executable(
   mandelbrot
   ${TF_BENCHMARK_DIR}/mandelbrot/main.cpp
   ${TF_BENCHMARK_DIR}/mandelbrot/omp.cpp
@@ -252,7 +254,7 @@ target_link_libraries(
 set_target_properties(mandelbrot PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 8: black_scholes
-add_executable(
+add_cross_platform_executable(
   black_scholes
   ${TF_BENCHMARK_DIR}/black_scholes/main.cpp
   ${TF_BENCHMARK_DIR}/black_scholes/omp.cpp
@@ -270,7 +272,7 @@ target_link_libraries(
 set_target_properties(black_scholes PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 9: reduce_sum
-add_executable(
+add_cross_platform_executable(
   reduce_sum
   ${TF_BENCHMARK_DIR}/reduce_sum/main.cpp
   ${TF_BENCHMARK_DIR}/reduce_sum/omp.cpp
@@ -288,7 +290,7 @@ target_link_libraries(
 set_target_properties(reduce_sum PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 10: parallel_sort
-add_executable(
+add_cross_platform_executable(
   parallel_sort
   ${TF_BENCHMARK_DIR}/parallel_sort/main.cpp
   ${TF_BENCHMARK_DIR}/parallel_sort/omp.cpp
@@ -312,7 +314,7 @@ set_target_properties(parallel_sort PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS}
 if(TF_BUILD_CUDA)
 
   ## cuda benchmark 1: heterogeneous traversal
-  add_executable(
+  add_cross_platform_executable(
     hetero_traversal
     ${TF_BENCHMARK_DIR}/hetero_traversal/main.cu
     ${TF_BENCHMARK_DIR}/hetero_traversal/taskflow.cu
