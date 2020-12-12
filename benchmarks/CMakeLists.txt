@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
-if(NOT OMPDIR OR NOT TBBDIR)
-  message(FATAL_ERROR "OpenMP or TBB lib root not set")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "iOS")
+  set(IOS ON)
+elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Android")
+  set(ANDROID ON)
 endif()
 
 # -----------------------------------------------------------------------------
@@ -17,32 +19,20 @@ include_directories(${EIGEN_ROOT})
 # -----------------------------------------------------------------------------
 
 if(ANDROID)
+  set(OMPDIR ${PROJECT_SOURCE_DIR}/omp-android)
+  set(OpenMP_VERSION 5.0.0)
+  set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
+  set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
+elseif(IOS)
+  set(OMPDIR ${PROJECT_SOURCE_DIR}/omp-ios)
   set(OpenMP_VERSION 5.0.0)
   set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
   set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
 else()
   include(FindOpenMP)
-endif()
 
-if("${CMAKE_SYSTEM_NAME}" MATCHES "iOS")
-  set(IOS ON)
-  set(IOS_EXCLUDE OFF)
-elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Android")
-  set(ANDROID ON)
-endif()
-
-function(build_target tar)
-  if(IOS_EXCLUDE)
-    target_compile_definitions(${tar} PUBLIC -DBUILD_IOS=1)
-  endif()
-endfunction()
-
-if(NOT OpenMP_CXX_FOUND)
-  message(STATUS "OpenMP not found")
-  if(IOS)
-    set(OpenMP_VERSION 5.0.0)
-    set(OpenMP_CXX_FLAGS -I${OMPDIR}/include)
-    set(OpenMP_CXX_LIBRARIES ${OMPDIR}/lib/libomp.a)
+  if(NOT OpenMP_CXX_FOUND)
+    message(FATAL_ERROR "OpenMP not found")
   endif()
 endif()
 
@@ -50,50 +40,12 @@ message(STATUS "OpenMP_VERSION: ${OpenMP_VERSION}")
 message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
 message(STATUS "OpenMP_CXX_LIBRARIES: ${OpenMP_CXX_LIBRARIES}")
 
-# if(NOT IOS)
-
-# # -----------------------------------------------------------------------------
-# # tbb package
-# # -----------------------------------------------------------------------------
-#   cmake_policy(PUSH)
-#   cmake_policy(SET CMP0074 NEW)
-
-#   if(NOT DEFINED TBB_ROOT_DIR)
-#     set(TBB_ROOT_DIR ${TF_3RD_PARTY_DIR}/tbb)
-#   endif()
-#   include(${TBB_ROOT_DIR}/cmake/TBBBuild.cmake)
-#   #tbb_build(TBB_ROOT ${TBB_ROOT_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
-#   tbb_build(TBB_ROOT ${TBB_ROOT_DIR} CONFIG_DIR TBB_DIR)
-#   unset(TBB_ROOT)  # unset is needed to pop CMP0074 without warning
-#   cmake_policy(POP)
-#   #find_package(TBB REQUIRED tbb_preview)
-#   find_package(TBB REQUIRED)
-#   #cmake_policy(POP)
-
-# endif()
-
-if(IOS)
-  add_library(tbb STATIC IMPORTED GLOBAL)
-  set_target_properties(tbb PROPERTIES
-    IMPORTED_LOCATION ${TBBDIR}/lib/libtbb_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
-  )
-  add_library(tbbmalloc STATIC IMPORTED GLOBAL)
-  set_target_properties(tbbmalloc PROPERTIES
-    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
-  )
-  add_library(tbbmalloc_proxy STATIC IMPORTED GLOBAL)
-  set_target_properties(tbbmalloc_proxy PROPERTIES
-    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
-    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
-  )
-  set(TBB_IMPORTED_TARGETS
-    tbb tbbmalloc tbbmalloc_proxy
-  )
-endif()
+# -----------------------------------------------------------------------------
+# tbb package
+# -----------------------------------------------------------------------------
 
 if(ANDROID)
+  set(TBBDIR ${PROJECT_SOURCE_DIR}/tbb-android)
   add_library(tbb STATIC IMPORTED GLOBAL)
   set_target_properties(tbb PROPERTIES
     IMPORTED_LOCATION ${TBBDIR}/lib/libtbb_static.a
@@ -112,58 +64,61 @@ if(ANDROID)
   set(TBB_IMPORTED_TARGETS
     tbbmalloc_proxy tbbmalloc  tbb
   )
+elseif(IOS)
+  set(TBBDIR ${PROJECT_SOURCE_DIR}/tbb-ios)
+  add_library(tbb STATIC IMPORTED GLOBAL)
+  set_target_properties(tbb PROPERTIES
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbb_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
+  )
+  add_library(tbbmalloc STATIC IMPORTED GLOBAL)
+  set_target_properties(tbbmalloc PROPERTIES
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
+  )
+  add_library(tbbmalloc_proxy STATIC IMPORTED GLOBAL)
+  set_target_properties(tbbmalloc_proxy PROPERTIES
+    IMPORTED_LOCATION ${TBBDIR}/lib/libtbbmalloc_proxy_static.a
+    INTERFACE_INCLUDE_DIRECTORIES ${TBBDIR}/include
+  )
+  set(TBB_IMPORTED_TARGETS
+    tbb tbbmalloc tbbmalloc_proxy
+  )
+else()
+  add_subdirectory(${TF_3RD_PARTY_DIR}/tbb ${CMAKE_BINARY_DIR}/tbb)
 endif()
-
 
 # -----------------------------------------------------------------------------
 # Benchmarks
 # -----------------------------------------------------------------------------
 
 ## benchmark 1: wavefront computing
+set(WAVEFRONT_SOURCES
+  ${TF_BENCHMARK_DIR}/benchmark.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/main.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/job.cpp
+  ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
+  ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
+)
+
 if(ANDROID)
-  add_library(
-    wavefront SHARED
-    ${TF_BENCHMARK_DIR}/jni_invoke.cpp
-    ${TF_BENCHMARK_DIR}/benchmark.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/main.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/job.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
-  )
+  add_library(wavefront SHARED ${TF_BENCHMARK_DIR}/jni_invoke.cpp ${WAVEFRONT_SOURCES} )
 else()
-  add_executable(
-    wavefront
-    ${TF_BENCHMARK_DIR}/benchmark.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/main.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/omp.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/tbb.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/seq.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/asio.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/job.cpp
-    ${TF_BENCHMARK_DIR}/wavefront/taskflow.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Job.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobGraph.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobHandle.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/JobSystem.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/WorkStealer.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ThreadPool.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/BatchAllocator.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/Memory.cpp
-    ${PROJECT_SOURCE_DIR}/3rd-party/JobSystem/ConditionVariable.cpp
-  )
+  add_executable(wavefront ${WAVEFRONT_SOURCES})
 endif()
+
 target_include_directories(wavefront PRIVATE
   ${PROJECT_SOURCE_DIR}/3rd-party
   ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
@@ -234,32 +189,23 @@ target_link_libraries(
 set_target_properties(linear_chain PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 5: MNIST
-
-if(NOT IOS AND NOT ANDROID)
-  ## std::filesystem
-  add_executable(
-    mnist 
-    ${TF_BENCHMARK_DIR}/mnist/main.cpp
-    ${TF_BENCHMARK_DIR}/mnist/omp.cpp
-    ${TF_BENCHMARK_DIR}/mnist/tbb.cpp
-    ${TF_BENCHMARK_DIR}/mnist/seq.cpp
-    ${TF_BENCHMARK_DIR}/mnist/taskflow.cpp
-  )
-  build_target(mnist)
-  target_include_directories(mnist PRIVATE 
-    ${PROJECT_SOURCE_DIR}/3rd-party/CLI11
-  )
-  target_link_libraries(
-    mnist 
-    ${PROJECT_NAME} 
-    ${TBB_IMPORTED_TARGETS}
-    ${OpenMP_CXX_LIBRARIES} 
-    stdc++fs 
-    tf::default_settings
-  )
-  set_target_properties(mnist PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
-
-endif()
+add_executable(
+  mnist
+  ${TF_BENCHMARK_DIR}/mnist/main.cpp
+  ${TF_BENCHMARK_DIR}/mnist/omp.cpp
+  ${TF_BENCHMARK_DIR}/mnist/tbb.cpp
+  ${TF_BENCHMARK_DIR}/mnist/seq.cpp
+  ${TF_BENCHMARK_DIR}/mnist/taskflow.cpp
+)
+target_include_directories(mnist PRIVATE ${PROJECT_SOURCE_DIR}/3rd-party/CLI11)
+target_link_libraries(
+  mnist
+  ${PROJECT_NAME}
+  ${TBB_IMPORTED_TARGETS}
+  ${OpenMP_CXX_LIBRARIES}
+  tf::default_settings
+)
+set_target_properties(mnist PROPERTIES COMPILE_FLAGS ${OpenMP_CXX_FLAGS})
 
 ## benchmark 6: matrix multiplication
 add_executable(
